@@ -1,0 +1,27 @@
+---
+- name: Install ArgoCD on Kubernetes
+  hosts: k8s-master
+  become: true
+# in first we need to install the kubernetes.core collection, you can do this by running the following command:
+# ansible-galaxy collection install kubernetes.core
+# thes collection provides the kubernetes.core.k8s module which is used to manage Kubernetes resources as:
+# ccreate
+# apply
+# update
+# delete
+
+  tasks:
+  - name: Create ArgoCD namespace
+    kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+       name: argocd
+
+  - name: Install ArgoCD
+    kubernetes.core.k8s:
+    state: present
+    src: "https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml"
+    namespace: argocd

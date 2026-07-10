@@ -1,0 +1,25 @@
+---
+- name: Install Trivy
+  hosts: host
+  become: true
+  tasks:
+
+  - name: Add Trivy repository
+    ansible.builtin.copy:
+      dest: /etc/yum.repos.d/trivy.repo
+      content: |
+       [trivy]
+       name=Trivy repository
+       baseurl=https://aquasecurity.github.io/trivy-repo/rpm/releases/\$basearch/
+       gpgcheck=1
+       enabled=1
+       gpgkey=https://aquasecurity.github.io/trivy-repo/rpm/public.key
+       
+  - name: Update yum
+    yum:
+     update_cache: yes
+
+  - name: Install Trivy
+    yum:
+     name: trivy
+     state: present
