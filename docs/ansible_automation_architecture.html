@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EasyShop Ansible Automation Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" integrity="sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/" crossorigin="anonymous"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      margin-bottom: 2rem;
+    }
+    
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .pulse-dot {
+      width: 12px;
+      height: 12px;
+      background: #fb923c;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+    
+    .subtitle {
+      color: #94a3b8;
+      font-size: 0.875rem;
+      margin-left: 1.75rem;
+    }
+    
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 1rem;
+      border: 1px solid #1e293b;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    
+    svg {
+      width: 100%;
+      min-width: 950px;
+      display: block;
+    }
+    
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    
+    .card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      padding: 1.25rem;
+    }
+    
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .card-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    .card-dot.orange { background: #fb923c; }
+    
+    .card h3 {
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    
+    .card ul {
+      list-style: none;
+      color: #94a3b8;
+      font-size: 0.75rem;
+    }
+    
+    .card li {
+      margin-bottom: 0.375rem;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: #475569;
+      font-size: 0.75rem;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 0.5rem;
+      margin-left: auto;
+      flex-shrink: 0;
+      align-items: center;
+    }
+    .toolbar-toggle {
+      background: transparent;
+      border: none;
+      color: #475569;
+      cursor: pointer;
+      font-size: 1.25rem;
+      line-height: 1;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.375rem;
+      transition: color 0.2s, background 0.2s;
+    }
+    .toolbar-toggle:hover { color: #94a3b8; background: rgba(30, 41, 59, 0.5); }
+    .toolbar-actions {
+      display: none;
+      gap: 0.5rem;
+    }
+    .toolbar.expanded .toolbar-actions { display: flex; }
+    .toolbar-actions button {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 0.375rem 0.75rem;
+      border-radius: 0.375rem;
+      font-family: inherit;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .toolbar-actions button:hover {
+      background: rgba(51, 65, 85, 0.8);
+      color: white;
+      border-color: #475569;
+    }
+
+    @media print {
+      body { background: #020617; padding: 1rem; }
+      .toolbar { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="report-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>EasyShop Ansible Provisioning & Monitoring Architecture</h1>
+        <div class="toolbar">
+          <div class="toolbar-actions">
+            <button onclick="copyAsImage(this)">📋 Copy</button>
+            <button onclick="downloadPNG(this)">🖼️ PNG</button>
+            <button onclick="downloadPDF(this)">📄 PDF</button>
+          </div>
+          <button class="toolbar-toggle" onclick="this.parentElement.classList.toggle('expanded')" title="Export options" aria-label="Export options">⋯</button>
+        </div>
+      </div>
+      <p class="subtitle">Visualizing playbook orchestration steps, control plane endpoint exposure, and the integrated log/metrics pipeline</p>
+    </div>
+
+    <!-- Main Diagram -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 1000 720">
+        <!-- Definitions -->
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <marker id="arrowhead-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb923c" />
+          </marker>
+          <marker id="arrowhead-violet" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Background Grid -->
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- ==================== ARROWS & CONNECTIONS (Rendered first) ==================== -->
+        <!-- Ansible SSH Execution Lines -->
+        <path d="M 180 320 Q 220 220 280 200" fill="none" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead-orange)"/>
+        <path d="M 180 340 L 290 380" fill="none" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead-orange)"/>
+        <path d="M 180 360 Q 220 460 280 480" fill="none" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead-orange)"/>
+        <path d="M 180 380 Q 220 540 630 450" fill="none" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead-orange)"/>
+
+        <!-- Promtail to Loki Log Shipping -->
+        <path d="M 640 250 L 610 250 L 610 525 L 560 525" fill="none" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead-violet)"/>
+
+        <!-- Prometheus Scrape Lines -->
+        <!-- Prometheus to Control Plane Metrics -->
+        <line x1="380" y1="360" x2="380" y2="310" stroke="#34d399" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrowhead)"/>
+        <!-- Prometheus to Node Exporter -->
+        <path d="M 430 360 L 430 340 L 775 340 L 775 200" fill="none" stroke="#34d399" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrowhead)"/>
+        <!-- Prometheus to Frontend /metrics -->
+        <path d="M 480 360 L 480 345 L 750 345 L 750 330" fill="none" stroke="#34d399" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrowhead)"/>
+        <!-- Prometheus to MongoDB Exporter -->
+        <path d="M 450 415 L 450 425 L 775 425 L 775 490" fill="none" stroke="#34d399" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrowhead)"/>
+
+        <!-- Grafana Queries -->
+        <line x1="430" y1="430" x2="430" y2="415" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="430" y1="485" x2="430" y2="500" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+
+        <!-- ==================== ANSIBLE CONTROL NODE ==================== -->
+        <!-- Opaque Mask -->
+        <rect x="40" y="260" width="140" height="150" rx="6" fill="#0f172a"/>
+        <!-- Styled Box -->
+        <rect x="40" y="260" width="140" height="150" rx="6" fill="rgba(251, 146, 60, 0.15)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="110" y="285" fill="white" font-size="11" font-weight="600" text-anchor="middle">Ansible Controller</text>
+        <text x="110" y="302" fill="#94a3b8" font-size="8" text-anchor="middle">site.yml Orchestrator</text>
+        <rect x="50" y="315" width="120" height="20" rx="3" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+        <text x="110" y="327" fill="#fb923c" font-size="7" font-weight="600" text-anchor="middle">Part 1: Prerequisites</text>
+        <rect x="50" y="342" width="120" height="20" rx="3" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+        <text x="110" y="354" fill="#fb923c" font-size="7" font-weight="600" text-anchor="middle">Part 2: ArgoCD / CD</text>
+        <rect x="50" y="369" width="120" height="20" rx="3" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+        <text x="110" y="381" fill="#fb923c" font-size="7" font-weight="600" text-anchor="middle">Part 3: Monitor Stack</text>
+
+
+        <!-- ==================== KUBERNETES CLUSTER ==================== -->
+        <!-- Cluster Region Boundary -->
+        <rect x="240" y="60" width="720" height="540" rx="12" fill="rgba(251, 191, 36, 0.02)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="252" y="80" fill="#fbbf24" font-size="10" font-weight="600">Kubernetes Cluster (kubeadm)</text>
+
+        <!-- MASTER NODE BOUNDARY -->
+        <rect x="270" y="100" width="320" height="480" rx="8" fill="rgba(8, 51, 68, 0.03)" stroke="#22d3ee" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="280" y="118" fill="#22d3ee" font-size="9" font-weight="600">Master Node (Control Plane)</text>
+
+        <!-- Master: ArgoCD -->
+        <rect x="290" y="135" width="280" height="60" rx="6" fill="#0f172a"/>
+        <rect x="290" y="135" width="280" height="60" rx="6" fill="rgba(30, 41, 59, 0.4)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="430" y="156" fill="white" font-size="11" font-weight="600" text-anchor="middle">ArgoCD</text>
+        <text x="430" y="172" fill="#94a3b8" font-size="9" text-anchor="middle">GitOps Continuous Delivery (Part 2)</text>
+        <text x="430" y="184" fill="#fbbf24" font-size="7" text-anchor="middle">Deployments Auto-Sync to Cluster</text>
+
+        <!-- Master: Control Plane Exposing Patches -->
+        <rect x="290" y="210" width="280" height="100" rx="6" fill="#0f172a"/>
+        <rect x="290" y="210" width="280" height="100" rx="6" fill="rgba(136, 19, 55, 0.25)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="430" y="228" fill="white" font-size="11" font-weight="600" text-anchor="middle">Control Plane Scrape Endpoint Patches</text>
+        <text x="430" y="246" fill="#fb7185" font-size="8" text-anchor="middle">• scheduler &amp; controller-manager bound to 0.0.0.0</text>
+        <text x="430" y="260" fill="#fb7185" font-size="8" text-anchor="middle">• etcd metrics-urls exposed to 0.0.0.0:2381</text>
+        <text x="430" y="274" fill="#fb7185" font-size="8" text-anchor="middle">• kube-proxy configmap metricsBindAddress: 0.0.0.0</text>
+        <text x="430" y="288" fill="#fb7185" font-size="8" text-anchor="middle">• metrics-server patched with --kubelet-insecure-tls</text>
+
+        <!-- Master: Monitoring Stack (kube-prometheus-stack + loki-stack) -->
+        <rect x="290" y="325" width="280" height="240" rx="8" fill="rgba(76, 29, 149, 0.05)" stroke="#a78bfa" stroke-width="1.2"/>
+        <text x="300" y="342" fill="#a78bfa" font-size="8" font-weight="600">Namespace: monitoring (Part 3)</text>
+
+        <!-- Observability Sub: Prometheus -->
+        <rect x="300" y="360" width="260" height="55" rx="6" fill="#0f172a"/>
+        <rect x="300" y="360" width="260" height="55" rx="6" fill="rgba(76, 29, 149, 0.3)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="430" y="378" fill="white" font-size="10" font-weight="600" text-anchor="middle">Prometheus Operator &amp; Server</text>
+        <text x="430" y="394" fill="#a78bfa" font-size="8" text-anchor="middle">TSDB &amp; Scrape Engine (NodePort 30090)</text>
+
+        <!-- Observability Sub: Grafana -->
+        <rect x="300" y="430" width="260" height="55" rx="6" fill="#0f172a"/>
+        <rect x="300" y="430" width="260" height="55" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="430" y="448" fill="white" font-size="10" font-weight="600" text-anchor="middle">Grafana Dashboard Server</text>
+        <text x="430" y="464" fill="#22d3ee" font-size="8" text-anchor="middle">Sidecar discovery: dashboards &amp; datasources (30030)</text>
+
+        <!-- Observability Sub: Loki -->
+        <rect x="300" y="500" width="260" height="50" rx="6" fill="#0f172a"/>
+        <rect x="300" y="500" width="260" height="50" rx="6" fill="rgba(76, 29, 149, 0.3)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="430" y="518" fill="white" font-size="10" font-weight="600" text-anchor="middle">Loki Log Aggregator</text>
+        <text x="430" y="534" fill="#a78bfa" font-size="8" text-anchor="middle">Filesystem persistent storage (local-path)</text>
+
+
+        <!-- WORKER NODES BOUNDARY -->
+        <rect x="620" y="100" width="310" height="480" rx="8" fill="rgba(6, 78, 59, 0.03)" stroke="#34d399" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="630" y="118" fill="#34d399" font-size="9" font-weight="600">Worker Nodes (Data Plane)</text>
+
+        <!-- Worker: Node Exporter -->
+        <rect x="640" y="135" width="270" height="60" rx="6" fill="#0f172a"/>
+        <rect x="640" y="135" width="270" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="775" y="156" fill="white" font-size="11" font-weight="600" text-anchor="middle">Node Exporter (DaemonSet)</text>
+        <text x="775" y="172" fill="#94a3b8" font-size="9" text-anchor="middle">Exposes hardware/OS metrics to Prometheus</text>
+
+        <!-- Worker: Promtail -->
+        <rect x="640" y="210" width="270" height="60" rx="6" fill="#0f172a"/>
+        <rect x="640" y="210" width="270" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="775" y="231" fill="white" font-size="11" font-weight="600" text-anchor="middle">Promtail (DaemonSet)</text>
+        <text x="775" y="247" fill="#94a3b8" font-size="9" text-anchor="middle">Collects and pushes pod logs to Loki</text>
+
+        <!-- Worker: Application Services / Pods -->
+        <rect x="640" y="285" width="270" height="280" rx="8" fill="rgba(30, 41, 59, 0.05)" stroke="#94a3b8" stroke-width="1.2"/>
+        <text x="650" y="302" fill="#94a3b8" font-size="8" font-weight="600">Namespace: tws-e-commerce-app</text>
+
+        <!-- App Pod: Frontend -->
+        <rect x="650" y="315" width="250" height="75" rx="6" fill="#0f172a"/>
+        <rect x="650" y="315" width="250" height="75" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="775" y="335" fill="white" font-size="10" font-weight="600" text-anchor="middle">easyshop-frontend</text>
+        <text x="775" y="352" fill="#94a3b8" font-size="8" text-anchor="middle">Next.js + prom-client metrics</text>
+        <text x="775" y="366" fill="#22d3ee" font-size="8" font-weight="600" text-anchor="middle">Scraped on port 3000 /metrics</text>
+
+        <!-- App Pod: Backend -->
+        <rect x="650" y="405" width="250" height="65" rx="6" fill="#0f172a"/>
+        <rect x="650" y="405" width="250" height="65" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="775" y="425" fill="white" font-size="10" font-weight="600" text-anchor="middle">easyshop-core / backend</text>
+        <text x="775" y="442" fill="#94a3b8" font-size="8" text-anchor="middle">Core transaction and order APIs</text>
+
+        <!-- App Pod: Database -->
+        <rect x="650" y="485" width="250" height="65" rx="6" fill="#0f172a"/>
+        <rect x="650" y="485" width="250" height="65" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="775" y="505" fill="white" font-size="10" font-weight="600" text-anchor="middle">MongoDB &amp; Sidecar Exporter</text>
+        <text x="775" y="522" fill="#94a3b8" font-size="8" text-anchor="middle">Exporter scrapes DB &amp; exposes on :9216</text>
+
+
+        <!-- ==================== LEGEND (Placed below the boundaries) ==================== -->
+        <rect x="30" y="630" width="940" height="60" rx="8" fill="rgba(15, 23, 42, 0.8)" stroke="#1e293b" stroke-width="1"/>
+        <text x="45" y="650" fill="white" font-size="10" font-weight="700">LEGEND</text>
+
+        <!-- Legend Items -->
+        <!-- Frontend -->
+        <rect x="150" y="658" width="16" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="172" y="666" fill="#94a3b8" font-size="8">Frontend</text>
+
+        <!-- Backend -->
+        <rect x="270" y="658" width="16" height="10" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="292" y="666" fill="#94a3b8" font-size="8">Backend / Node</text>
+
+        <!-- Database -->
+        <rect x="420" y="658" width="16" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="442" y="666" fill="#94a3b8" font-size="8">Database</text>
+
+        <!-- Control Plane Security -->
+        <rect x="550" y="658" width="16" height="10" rx="2" fill="rgba(136, 19, 55, 0.25)" stroke="#fb7185" stroke-width="1"/>
+        <text x="572" y="666" fill="#94a3b8" font-size="8">Control Plane / Security</text>
+
+        <!-- Ansible Automation -->
+        <rect x="750" y="658" width="16" height="10" rx="2" fill="rgba(251, 146, 60, 0.15)" stroke="#fb923c" stroke-width="1"/>
+        <text x="772" y="666" fill="#94a3b8" font-size="8">Ansible Automation</text>
+
+        <!-- Connections -->
+        <line x1="150" y1="685" x2="166" y2="685" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="3,3"/>
+        <text x="172" y="688" fill="#94a3b8" font-size="8">Ansible SSH Flow</text>
+
+        <line x1="270" y1="685" x2="286" y2="685" stroke="#34d399" stroke-width="1.2" stroke-dasharray="2,2"/>
+        <text x="292" y="688" fill="#94a3b8" font-size="8">Metrics Scrape Target</text>
+
+        <line x1="420" y1="685" x2="436" y2="685" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="442" y="688" fill="#94a3b8" font-size="8">Log Ship (Promtail-Loki)</text>
+      </svg>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot orange"></div>
+          <h3>Ansible Automation Flow</h3>
+        </div>
+        <ul>
+          <li>• <b>Part 1</b> installs common prerequisites, kubectl, and setup packages across all hosts in the inventory.</li>
+          <li>• <b>Part 2</b> installs Helm binaries and provisions GitOps ArgoCD components onto the Master Node.</li>
+          <li>• <b>Part 3</b> builds chart dependencies and deploys the unified <i>easyshop-monitoring</i> stack (kube-prometheus-stack + loki-stack).</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>Kubeadm Secure Patches</h3>
+        </div>
+        <ul>
+          <li>• Exposes metrics by changing kube-scheduler and kube-controller-manager bind address to 0.0.0.0.</li>
+          <li>• Opens etcd metrics bind address to all interfaces on port 2381.</li>
+          <li>• Patches kube-proxy ConfigMap metricsBindAddress and rollouts the DaemonSet to apply changes.</li>
+          <li>• Appends <i>--kubelet-insecure-tls</i> to metrics-server deployment.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>Integrated Observability</h3>
+        </div>
+        <ul>
+          <li>• Next.js frontend instrumented via prom-client exposing metrics at /metrics on port 3000.</li>
+          <li>• Node Exporter and Promtail DaemonSets scrape hardware and pod log files across all cluster worker nodes.</li>
+          <li>• Grafana configures Loki as a local datasource and dynamically imports pre-packaged developer dashboards.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <p class="footer">
+      EasyShop Infrastructure Observability • Document Version 1.0.0 • Generated via Antigravity-IDE
+    </p>
+  </div>
+
+  <script>
+    async function copyAsImage(btn) {
+      const orig = btn.textContent;
+      try {
+        const el = document.getElementById('report-container');
+        const r = el.getBoundingClientRect();
+        const pad = 32;
+        const canvas = await html2canvas(document.body, { 
+          backgroundColor: '#020617', 
+          scale: 2, 
+          useCORS: true, 
+          ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), 
+          x: r.left + window.scrollX - pad, 
+          y: r.top + window.scrollY - pad, 
+          width: r.width + pad * 2, 
+          height: r.height + pad * 2 
+        });
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        btn.textContent = '✓ Copied!';
+      } catch (e) {
+        btn.textContent = '✗ Failed';
+      }
+      setTimeout(() => btn.textContent = orig, 2000);
+    }
+
+    async function downloadPNG(btn) {
+      const orig = btn.textContent;
+      btn.textContent = '⏳ ...';
+      try {
+        const el = document.getElementById('report-container');
+        const r = el.getBoundingClientRect();
+        const pad = 32;
+        const canvas = await html2canvas(document.body, { 
+          backgroundColor: '#020617', 
+          scale: 2, 
+          useCORS: true, 
+          ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), 
+          x: r.left + window.scrollX - pad, 
+          y: r.top + window.scrollY - pad, 
+          width: r.width + pad * 2, 
+          height: r.height + pad * 2 
+        });
+        const link = document.createElement('a');
+        link.download = 'ansible_automation_architecture.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        btn.textContent = '✓ Done!';
+      } catch (e) {
+        btn.textContent = '✗ Failed';
+      }
+      setTimeout(() => btn.textContent = orig, 2000);
+    }
+
+    async function downloadPDF(btn) {
+      const orig = btn.textContent;
+      btn.textContent = '⏳ ...';
+      try {
+        const el = document.getElementById('report-container');
+        const r = el.getBoundingClientRect();
+        const pad = 32;
+        const canvas = await html2canvas(document.body, { 
+          backgroundColor: '#020617', 
+          scale: 2, 
+          useCORS: true, 
+          ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), 
+          x: r.left + window.scrollX - pad, 
+          y: r.top + window.scrollY - pad, 
+          width: r.width + pad * 2, 
+          height: r.height + pad * 2 
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const orientation = canvas.width > canvas.height ? 'landscape' : 'portrait';
+        const pdf = new jsPDF({ 
+          orientation, 
+          unit: 'px', 
+          format: [canvas.width, canvas.height], 
+          hotfixes: ['px_scaling'] 
+        });
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+        pdf.save('ansible_automation_architecture.pdf');
+        btn.textContent = '✓ Done!';
+      } catch (e) {
+        btn.textContent = '✗ Failed';
+      }
+      setTimeout(() => btn.textContent = orig, 2000);
+    }
+  </script>
+</body>
+</html>
